@@ -1,5 +1,5 @@
 from rest_framework import generics, filters, status
-from .models import User, Company, WatchlistDetail
+from .models import User, Company, WatchlistDetail, WatchlistStockDetail
 from .serializers import (RegisterSerializer, UserLoginSerializer, CompanySerializer,
                           CompanyRegisterSerializer, WatchlistDetailSerializer, WatchlistListDetailSerializer)
 from rest_framework.response import Response
@@ -61,3 +61,28 @@ class WatchlistListView(generics.ListAPIView):
 
     def get_queryset(self):
         return WatchlistDetail.objects.filter(user=self.request.user)
+
+
+class RemoveStockFromWatchlistAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        watchlist_id = request.data.get("watchlist_id")
+        stock_id = request.data.get("stock_id")
+
+        try:
+            watchlist = WatchlistDetail.objects.get(id=watchlist_id, user=request.user)
+        except WatchlistDetail.DoesNotExist:
+            return Response({"error": "Watchlist not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            stock = Company.objects.get(id=stock_id)
+        except Company.DoesNotExist:
+            return Response({"error": "Stock not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        deleted, _ = WatchlistStockDetail.objects.filter(watchlist=watchlist, stock_id=stock).delete()
+
+        if deleted == 0:
+            return Response({"error": "Stock not found in watchlist."}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({"message": "Stock removed from watchlist."}, status=status.HTTP_200_OK)

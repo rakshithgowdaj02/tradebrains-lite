@@ -6,6 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.validators import validate_email
+from django.shortcuts import get_object_or_404
 
 User = get_user_model()
 
@@ -65,6 +66,17 @@ class CompanyRegisterSerializer(serializers.ModelSerializer):
         fields = ['company_name', 'symbol', 'scriptcode', 'created_on', 'modified_on']
         read_only_fields = ['created_on', 'modified_on']
 
+    def validate(self, data):
+        symbol = data.get('symbol')
+        scriptcode = data.get('scriptcode')
+
+        if Company.objects.filter(symbol=symbol).exists():
+            raise serializers.ValidationError("A company with this symbol already exists.")
+        if Company.objects.filter(scriptcode=scriptcode).exists():
+            raise serializers.ValidationError("A company with this scriptcode already exists.")
+
+        return data
+
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
@@ -81,15 +93,22 @@ class WatchlistStockDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WatchlistStockDetail
-        fields = ('id', 'stock')
+        fields = ('id', 'stock', 'created_on')
+
+
+class WatchlistStockInputSerializer(serializers.Serializer):
+    stock_id = serializers.IntegerField()
 
 
 class WatchlistDetailSerializer(serializers.ModelSerializer):
-    stocks = WatchlistStockDetailSerializer(many=True, write_only=True)
+    stocks = WatchlistStockInputSerializer(many=True, write_only=True)
+    stock_details = WatchlistStockDetailSerializer(many=True, read_only=True, source='stocks')
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
+    user_name = serializers.CharField(source='user.username', read_only=True)
 
     class Meta:
         model = WatchlistDetail
-        fields = ('id', 'watchlist_name', 'stocks')
+        fields = ['id', 'watchlist_name', 'stocks', 'stock_details', 'user_id', 'user_name']
 
     def create(self, validated_data):
         user = self.context['request'].user
@@ -105,7 +124,8 @@ class WatchlistDetailSerializer(serializers.ModelSerializer):
 
         # Update stocks (clear and add new)
         for stock in stocks_data:
-            WatchlistStockDetail.objects.create(watchlist=watchlist, stock_id=stock['stock_id'])
+            company = get_object_or_404(Company, id=stock['stock_id'])
+            WatchlistStockDetail.objects.create(watchlist=watchlist, stock_id=company)
 
         return watchlist
 
@@ -123,3 +143,8 @@ class WatchlistListDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = WatchlistDetail
         fields = ['id', 'watchlist_name', 'user', 'stocks']
+
+
+class RemoveWatchlistStockSerializer(serializers.Serializer):
+    watchlist_id = serializers.IntegerField()
+    stock_id = serializers.IntegerField()
