@@ -5,6 +5,8 @@ from .serializers import (RegisterSerializer, UserLoginSerializer, CompanySerial
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from django_filters.rest_framework import DjangoFilterBackend
+import django_filters
 
 
 class RegisterView(generics.CreateAPIView):
@@ -39,12 +41,21 @@ class CheckAuthView(APIView):
         })
 
 
+class CompanyFilter(django_filters.FilterSet):
+    company_name = django_filters.CharFilter(lookup_expr='icontains')
+    symbol = django_filters.CharFilter(lookup_expr='icontains')
+    scriptcode = django_filters.CharFilter(lookup_expr='icontains')
+
+    class Meta:
+        model = Company
+        fields = ['company_name', 'symbol', 'scriptcode']
+
+
 class CompanyListAPIView(generics.ListAPIView):
     queryset = Company.objects.all()
     serializer_class = CompanySerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'sector', 'symbol']
-    ordering_fields = ['name', 'sector', 'created_on']
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = CompanyFilter
 
 
 class WatchlistCreateOrUpdateView(generics.CreateAPIView):
