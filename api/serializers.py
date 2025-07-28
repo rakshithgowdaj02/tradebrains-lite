@@ -21,10 +21,6 @@ class RegisterSerializer(serializers.ModelSerializer):
             'password': {'write_only': True}
         }
 
-    def validate_email(self, value):
-        validate_email(value)
-        return value
-
     def create(self, validated_data):
         password = validated_data.pop('password')
         user = User(**validated_data)
@@ -53,10 +49,10 @@ class UserLoginSerializer(serializers.Serializer):
         refresh = RefreshToken.for_user(user)
 
         return {
-            'refresh': str(refresh),
+            'status': True,
             'access': str(refresh.access_token),
             'username': user.username,
-            'email': user.email,
+            'email': user.email
         }
 
 
