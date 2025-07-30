@@ -3,3 +3,4 @@ djangorestframework
 djangorestframework-simplejwt
 rest_framework_simplejwt
 django-filter
+social-auth-app-django

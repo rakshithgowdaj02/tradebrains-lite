@@ -18,7 +18,7 @@ from datetime import timedelta
 BASE_DIR = Path(__file__).resolve().parent.parent
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0"]
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback_key")
-DEBUG = True
+DEBUG = False
 AUTH_USER_MODEL = 'api.User'
 APPEND_SLASH = False
 
@@ -32,7 +32,7 @@ APPEND_SLASH = False
 
 # Application definition
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=4),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=1),
 }
 
 INSTALLED_APPS = [
@@ -43,7 +43,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'api'
+    'api',
+    'social_django'
 ]
 
 REST_FRAMEWORK = {
@@ -63,7 +64,16 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'social_django.middleware.SocialAuthExceptionMiddleware',
 ]
+
+
+AUTHENTICATION_BACKENDS = (
+    'social_core.backends.google.GoogleOAuth2',
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+
 
 ROOT_URLCONF = 'myproject.urls'
 
@@ -76,6 +86,8 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
+                'social_django.context_processors.backends',  # REQUIRED
+                'social_django.context_processors.login_redirect',  # OPTIONAL
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
@@ -137,3 +149,23 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# settings.py
+
+# Google OAuth2 Keys
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '55262224150-efs1t1pqptaurfr67ng1d0c2hnhjfsbf.apps.googleusercontent.com'
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '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'
+
+# Permissions you are requesting from the user's Google account
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['email', 'profile']
+
+# Extra data you want to store from the Google account
+SOCIAL_AUTH_GOOGLE_OAUTH2_EXTRA_DATA = ['first_name', 'last_name']
+
+# Optional: Redirect URLs
+# LOGIN_REDIRECT_URL = '/dashboard/'
+LOGOUT_REDIRECT_URL = '/auth/login/google-oauth2/'
+# LOGIN_URL = '/auth/login/google-oauth2/'
+
+

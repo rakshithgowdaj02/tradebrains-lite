@@ -38,9 +38,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     objects = CustomUserManager()
 
-    def __str__(self):
-        return self.username
-
 
 # Company model
 class Company(models.Model):
@@ -75,3 +72,7 @@ class WatchlistStockDetail(models.Model):
     stock_id = models.ForeignKey(Company, on_delete=models.CASCADE)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
+
+# user profile accesstoken
+# validate token
+# new access token in access token is expired

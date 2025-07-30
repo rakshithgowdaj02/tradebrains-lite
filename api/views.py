@@ -1,13 +1,15 @@
 from rest_framework import generics, filters, status
 from .models import User, Company, WatchlistDetail, WatchlistStockDetail
-from .serializers import (RegisterSerializer, UserLoginSerializer, CompanySerializer,
+from .serializers import (RegisterSerializer, UserLoginSerializer, CompanySerializer, UserProfileSerializer,
                           CompanyRegisterSerializer, WatchlistDetailSerializer, WatchlistListDetailSerializer)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 import django_filters
-
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -31,6 +33,16 @@ class RegisterCompany(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
 
 
+class UserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        serializer = UserProfileSerializer(user)
+        return Response(serializer.data)
+
+
+
 class CheckAuthView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -38,6 +50,7 @@ class CheckAuthView(APIView):
         return Response({
             "user_id": request.user.id,
             "username": request.user.username,
+            "status": True
         })
 
 
@@ -97,3 +110,23 @@ class RemoveStockFromWatchlistAPIView(APIView):
             return Response({"error": "Stock not found in watchlist."}, status=status.HTTP_404_NOT_FOUND)
 
         return Response({"message": "Stock removed from watchlist."}, status=status.HTTP_200_OK)
+
+
+class CustomTokenRefreshView(APIView):
+    def post(self, request):
+        refresh_token = request.data.get("refresh")
+
+        if not refresh_token:
+            return Response({"detail": "Refresh token is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            token = RefreshToken(refresh_token)
+            access_token = str(token.access_token)
+            return Response({"access": access_token}, status=status.HTTP_200_OK)
+        except TokenError as e:
+            return Response({"detail": "Invalid or expired refresh token."}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+@login_required
+def dashboard_view(request):
+    return render(request, "dashboard.html")

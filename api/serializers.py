@@ -1,4 +1,5 @@
 from rest_framework import serializers, status
+from rest_framework.validators import UniqueValidator
 from .models import User, Company, WatchlistStockDetail, WatchlistDetail
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.hashers import make_password
@@ -7,12 +8,17 @@ from django.contrib.auth.hashers import check_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.validators import validate_email
 from django.shortcuts import get_object_or_404
+import re
 
 User = get_user_model()
 
 
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    password = serializers.CharField(write_only=True, required=True, validators=[validate_password],
+                                     help_text="Password must be at least 8 characters with one uppercase, one number, and one special character.",
+                                     )
+    mobile = serializers.CharField(required=True,
+                                   validators=[UniqueValidator(queryset=User.objects.all(), message="This Mobile no is already registered")])
 
     class Meta:
         model = User
@@ -21,12 +27,30 @@ class RegisterSerializer(serializers.ModelSerializer):
             'password': {'write_only': True}
         }
 
+    def validate_password(self, value):
+        # Custom password validation
+        if len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters long.")
+        if not re.search(r'[A-Z]', value):
+            raise serializers.ValidationError("Password must contain at least one uppercase letter.")
+        if not re.search(r'\d', value):
+            raise serializers.ValidationError("Password must contain at least one number.")
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', value):
+            raise serializers.ValidationError("Password must contain at least one special character.")
+        return value
+
     def create(self, validated_data):
         password = validated_data.pop('password')
         user = User(**validated_data)
         user.set_password(password)  # properly hashes the password
         user.save()
         return user
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'mobile', 'is_active', 'created_on', 'modified_on']
 
 
 class UserLoginSerializer(serializers.Serializer):
@@ -50,10 +74,13 @@ class UserLoginSerializer(serializers.Serializer):
 
         return {
             'status': True,
+            'refresh': str(refresh),
             'access': str(refresh.access_token),
             'username': user.username,
             'email': user.email
         }
+
+# class
 
 
 class CompanyRegisterSerializer(serializers.ModelSerializer):
